@@ -4,8 +4,6 @@
 #include <string>
 #include <dlfcn.h>
 #include <unistd.h>
-#include <locale>
-#include <codecvt>
 
 #define DBG(a) if (debug) std::cerr << a
 
