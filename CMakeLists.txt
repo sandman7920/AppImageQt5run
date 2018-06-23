@@ -25,7 +25,7 @@ include_directories(SYSTEM ${QT_ROOT}/include)
 include_directories(SYSTEM ${QT_ROOT}/include/QtCore)
 link_directories(${QT_ROOT}/lib)
 
-add_executable(${APP_NAME} "main.cpp")
+add_executable(${APP_NAME} QtInfo.cpp main.cpp)
 target_link_libraries(${APP_NAME} -Wl,--rpath-link=${QT_ROOT}/lib -lQt5Core -ldl)
 
 add_custom_command(TARGET ${APP_NAME} POST_BUILD

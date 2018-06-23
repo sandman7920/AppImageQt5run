@@ -1,8 +1,7 @@
-#include <QCoreApplication>
-#include <QStringList>
+#include "QtInfo.h"
+#include <cstring>
 #include <iostream>
 #include <string>
-#include <dlfcn.h>
 #include <unistd.h>
 
 #define DBG(a) if (debug) std::cerr << a
@@ -41,65 +40,23 @@ int main(int /*argc*/, char *argv[]) {
     pos = self.find_last_of('/');
     const std::string appPath = (pos != std::string::npos) ? self.substr(0, pos) : "";
 
-    std::string qt_plugins("");
-    search_path = realpath(std::string(appPath).append("/../plugins").c_str(), nullptr);
-    if (search_path != nullptr) {
-        qt_plugins.append(search_path);
-        free(search_path);
-    } else {
-        std::cerr << "Warning " << std::string(appPath).append("/../plugins")
-                  << " does not exists" << std::endl;
-    }
-
-    DBG("dlopen(libQt5Core.so.5) -> ");
-    void *handle = dlopen("libQt5Core.so.5", RTLD_NOW | RTLD_GLOBAL);
-    if (handle != nullptr) {
-        Dl_info  DlInfo;
-        void *p = dlsym(handle, "_ZN16QCoreApplication12libraryPathsEv");
-        int nRet = dladdr(p, &DlInfo);
-        if (nRet) {
-            DBG("loaded ") << DlInfo.dli_fname << std::endl;
-
-            QStringList (*libraryPaths)();
-            *(void **) (&libraryPaths) = p;
-
-            const QStringList &plugins = (*libraryPaths)();
-            for (const auto &qstring: plugins) {
-                if(!qt_plugins.empty()) qt_plugins.push_back(':');
-                qt_plugins.append(qstring.toStdString());
-            }
-        } else {
-            DBG("failed") << std::endl;
-        }
-        dlclose(handle);
-    } else {
-        DBG("does not exists in system") << std::endl;
-    }
-    setenv("QT_PLUGIN_PATH", qt_plugins.c_str(), 1);
-
-    std::string ld_path("");;
-    search_path = realpath(std::string(appPath).append("/../lib").c_str(), nullptr);
-    if (search_path != nullptr) {
-        ld_path.append(search_path);
-        free(search_path);
-    } else {
-        std::cerr << "Warning " << std::string(appPath).append("/../lib")
-                  << " does not exists" << std::endl;
-    }
+    auto info = QtInfo::getInfo(appPath, real_path, debug);
 
     char *OLD_LD_PATH = getenv("OLD_LD_LIBRARY_PATH");
     if (OLD_LD_PATH != nullptr) {
-        if (!ld_path.empty()) ld_path.push_back(':');
-        ld_path.append(OLD_LD_PATH);
+        if (!info.ld_path.empty()) info.ld_path.push_back(':');
+        info.ld_path.append(OLD_LD_PATH);
     }
     unsetenv("OLD_LD_LIBRARY_PATH");
-    setenv("LD_LIBRARY_PATH", ld_path.c_str(), 1);
 
     if (debug) {
-        std::cerr << "LD_LIBRARY_PATH=" << ld_path << '\n'
-                  << "QT_PLUGIN_PATH=" << qt_plugins << '\n'
+        std::cerr << "LD_LIBRARY_PATH=" << info.ld_path << '\n'
+                  << "QT_PLUGIN_PATH=" << info.qt_plugins << '\n'
                   << "EXECUTABLE " << argv[0] << std::endl;
     }
+
+    setenv("LD_LIBRARY_PATH", info.ld_path.c_str(), 1);
+    setenv("QT_PLUGIN_PATH", info.qt_plugins.c_str(), 1);
 
     return execve(argv[0], argv, environ);
 }
