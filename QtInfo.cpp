@@ -11,8 +11,10 @@ Info QtInfo::getInfo(const std::string &appPath, const char *exe, bool debug) {
     std::string system_lib;
     std::string system_plugins;
     int system_version = 0;
-    int local_version = getLocalQtVersion(appPath, debug);
+//    int local_version = getLocalQtVersion(appPath, debug);
+
     DBG("load libQt5Core.so.5 system -> ");
+    dlerror(); // reset errors
     void *handle = dlopen("libQt5Core.so.5", RTLD_NOW | RTLD_GLOBAL); // LD_PRELOAD
     if (handle != nullptr) {
         char origin[2048];
@@ -20,13 +22,20 @@ Info QtInfo::getInfo(const std::string &appPath, const char *exe, bool debug) {
             const char *version = qVersion();
             DBG("OK ") << origin << "/libQt5Core.so.5 (" << version << ')' << std::endl;
             system_version = getIntQtVersion(version);
-            system_lib = QLibraryInfo::location(QLibraryInfo::LibrariesPath).toStdString();
+            system_lib = origin;
             system_plugins = QLibraryInfo::location(QLibraryInfo::PluginsPath).toStdString();
         }
         dlclose(handle);
     } else {
-        DBG("FAILED") << std::endl;
+        char *err = dlerror();
+        if (debug) {
+            std::cerr << "FAILED";
+            if (err) std::cerr << ' ' << err;
+            std::cerr << std::endl;
+        }
     }
+
+    int local_version = getLocalQtVersion(appPath, debug);
 
     bool use_system = false;
     FILE *always_local = fopen(std::string(appPath).append("/qt5.always_local").c_str(), "r");
@@ -38,12 +47,12 @@ Info QtInfo::getInfo(const std::string &appPath, const char *exe, bool debug) {
                 if (use_system) {
                     std::cerr << "yes" << std::endl;
                 } else {
-                    std::cerr << "no (missing libraries in system path)" << std::endl;
+                    std::cerr << "no (missing Qt libraries in system path)" << std::endl;
                 }
             }
         }
     } else {
-        DBG("qt5.always_local exists local Qt version") << std::endl;
+        DBG("qt5.always_local exists local Qt version will be used") << std::endl;
         fclose(always_local);
     }
 
@@ -60,7 +69,7 @@ Info QtInfo::getInfo(const std::string &appPath, const char *exe, bool debug) {
 }
 
 bool QtInfo::checkDeps(const std::string &system_lib, const char *exe, bool debug) {
-    bool result = false;
+    int state = 1;
     std::string cmd("LD_TRACE_LOADED_OBJECTS=1");
     cmd.append(" LD_LIBRARY_PATH=").append(system_lib)
        .append(" LD_BIND_NOW=1 ")
@@ -68,28 +77,25 @@ bool QtInfo::checkDeps(const std::string &system_lib, const char *exe, bool debu
 
     FILE *ldd = popen(cmd.c_str(), "r");
     if (ldd) {
+        state = 0;
         char *path;
-        bool failed = false;
         char line[1024];
         while (!feof(ldd) && fgets(line, 1024, ldd)) {
-            if (failed || strstr(line, "Qt5") == nullptr) continue;
+            if (strstr(line, "Qt5") == nullptr) continue;
             DBG(line);
-            if ((path = strstr(line, "=> "))) {
-                path = &line[path - line + 3];
-                if (strncmp(system_lib.c_str(), path, system_lib.length())) {
-                    failed = true;
-                }
-            }
+            if (state == 0 && (path = strstr(line, "/"))) {
+                state = strncmp(system_lib.c_str(), path, system_lib.length());
+            } else state = 1;
         }
-        int r = pclose(ldd);
-        result = !failed && r == 0;
+        state += pclose(ldd);
     }
-    return result;
+    return state == 0;
 }
 
 int QtInfo::getLocalQtVersion(const std::string &appPath, bool debug) {
     int result = 0;
     DBG("load libQt5Core.so.5  local -> ");
+    dlerror(); // reset errors
     void *handle = dlopen(std::string(appPath).append("/../lib/libQt5Core.so.5").c_str(), RTLD_LAZY);
     if (handle != nullptr) {
         void *p = dlsym(handle, "qVersion");
@@ -103,7 +109,12 @@ int QtInfo::getLocalQtVersion(const std::string &appPath, bool debug) {
         }
         dlclose(handle);
     } else {
-        DBG("FAILED") << std::endl;
+        char *err = dlerror();
+        if (debug) {
+            std::cerr << "FAILED";
+            if (err) std::cerr << ' ' << err;
+            std::cerr << std::endl;
+        }
     }
     return result;
 }
