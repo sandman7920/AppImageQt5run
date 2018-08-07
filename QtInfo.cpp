@@ -11,7 +11,6 @@ Info QtInfo::getInfo(const std::string &appPath, const char *exe, bool debug) {
     std::string system_lib;
     std::string system_plugins;
     int system_version = 0;
-//    int local_version = getLocalQtVersion(appPath, debug);
 
     DBG("load libQt5Core.so.5 system -> ");
     dlerror(); // reset errors
