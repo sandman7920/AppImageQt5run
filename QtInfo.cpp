@@ -12,8 +12,10 @@ Info QtInfo::getInfo(const std::string &appPath, const char *exe, bool debug) {
     std::string system_plugins;
     int system_version = 0;
 
-    DBG("load libQt5Core.so.5 system -> ");
     dlerror(); // reset errors
+    int local_version = getLocalQtVersion(appPath, debug);
+
+    DBG("load libQt5Core.so.5 system -> ");
     void *handle = dlopen("libQt5Core.so.5", RTLD_NOW | RTLD_GLOBAL); // LD_PRELOAD
     if (handle != nullptr) {
         char origin[2048];
@@ -34,7 +36,7 @@ Info QtInfo::getInfo(const std::string &appPath, const char *exe, bool debug) {
         }
     }
 
-    int local_version = getLocalQtVersion(appPath, debug);
+
 
     bool use_system = false;
     FILE *always_local = fopen(std::string(appPath).append("/qt5.always_local").c_str(), "r");
@@ -95,13 +97,13 @@ int QtInfo::getLocalQtVersion(const std::string &appPath, bool debug) {
     int result = 0;
     DBG("load libQt5Core.so.5  local -> ");
     dlerror(); // reset errors
-    void *handle = dlopen(std::string(appPath).append("/../lib/libQt5Core.so.5").c_str(), RTLD_LAZY);
+    const std::string lib = appPath + "/../lib/libQt5Core.so.5";
+    void *handle = dlopen(lib.c_str(), RTLD_LAZY | RTLD_LOCAL);
     if (handle != nullptr) {
         void *p = dlsym(handle, "qVersion");
         char origin[2048];
         if (p != nullptr && dlinfo(handle, RTLD_DI_ORIGIN, origin) == 0) {
-            const char * (*qVersion)();
-            *(reinterpret_cast<void**>(&qVersion)) = p;
+            auto qVersion = reinterpret_cast<const char*(*)()>(p);
             const char *version = qVersion();
             DBG("OK ") << origin << "/libQt5Core.so.5 (" << version << ')' << std::endl;
             result = getIntQtVersion(version);

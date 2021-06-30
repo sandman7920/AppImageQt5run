@@ -29,5 +29,5 @@ add_executable(${APP_NAME} QtInfo.cpp main.cpp)
 target_link_libraries(${APP_NAME} -Wl,--rpath-link=${QT_ROOT}/lib -lQt5Core -ldl)
 
 add_custom_command(TARGET ${APP_NAME} POST_BUILD
-    COMMAND ${PATCH_ELF} --remove-needed libQt5Core.so.5 "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${APP_NAME}"
+    COMMAND ${PATCH_ELF} --remove-needed libQt5Core.so.5 "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/${APP_NAME}"
 )

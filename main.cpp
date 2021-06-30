@@ -55,6 +55,19 @@ int main(int /*argc*/, char *argv[]) {
                   << "EXECUTABLE " << argv[0] << std::endl;
     }
 
+    if (auto s = getenv("XDG_CURRENT_DESKTOP")) {
+        std::string current_desktop(s);
+        for (auto &c : current_desktop) {
+            c = std::toupper(c);
+        }
+        if (current_desktop.find("KDE") == std::string::npos && current_desktop.find("LXQT") == std::string::npos) {
+            setenv("QT_QPA_PLATFORMTHEME", "gtk2", 0);
+            if (debug) {
+                std::cerr << "QT_QPA_PLATFORMTHEME=" << getenv("QT_QPA_PLATFORMTHEME") << std::endl;
+            }
+        }
+    }
+
     setenv("LD_LIBRARY_PATH", info.ld_path.c_str(), 1);
     setenv("QT_PLUGIN_PATH", info.qt_plugins.c_str(), 1);
 
