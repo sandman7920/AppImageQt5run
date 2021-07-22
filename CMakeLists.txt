@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 project(AppImageQt5run)
 
 set(APP_NAME "appimage.qt5run")
@@ -25,9 +25,9 @@ include_directories(SYSTEM ${QT_ROOT}/include)
 include_directories(SYSTEM ${QT_ROOT}/include/QtCore)
 link_directories(${QT_ROOT}/lib)
 
-add_executable(${APP_NAME} QtInfo.cpp main.cpp)
+add_executable(${APP_NAME} QtInfo.cpp LSBRelease.cpp main.cpp)
 target_link_libraries(${APP_NAME} -Wl,--rpath-link=${QT_ROOT}/lib -lQt5Core -ldl)
 
 add_custom_command(TARGET ${APP_NAME} POST_BUILD
-    COMMAND ${PATCH_ELF} --remove-needed libQt5Core.so.5 "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/${APP_NAME}"
+    COMMAND ${PATCH_ELF} --remove-needed libQt5Core.so.5 "$<TARGET_FILE:${APP_NAME}>"
 )

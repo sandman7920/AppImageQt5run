@@ -1,4 +1,6 @@
+#include "LSBRelease.h"
 #include "QtInfo.h"
+
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -61,13 +63,19 @@ int main(int /*argc*/, char *argv[]) {
             c = std::toupper(c);
         }
         if (current_desktop.find("KDE") == std::string::npos && current_desktop.find("LXQT") == std::string::npos) {
-            setenv("QT_QPA_PLATFORMTHEME", "gtk2", 0);
+            char *qpa_theme = getenv("QT_QPA_PLATFORMTHEME");
+            setenv("QT_QPA_PLATFORMTHEME", "gtk2", qpa_theme != nullptr && strncmp(qpa_theme, "appmenu-qt5", 11) == 0);
             if (debug) {
                 std::cerr << "QT_QPA_PLATFORMTHEME=" << getenv("QT_QPA_PLATFORMTHEME") << std::endl;
             }
         }
     }
 
+    LSBRelease lsb_release;
+    if (!lsb_release.code_name.empty()) {
+        info.ld_path.push_back(':');
+        info.ld_path.append(appPath).append("../lib_").append(lsb_release.code_name);
+    }
     setenv("LD_LIBRARY_PATH", info.ld_path.c_str(), 1);
     setenv("QT_PLUGIN_PATH", info.qt_plugins.c_str(), 1);
 

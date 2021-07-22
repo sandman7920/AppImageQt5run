@@ -41,8 +41,8 @@ Info QtInfo::getInfo(const std::string &appPath, const char *exe, bool debug) {
     bool use_system = false;
     FILE *always_local = fopen(std::string(appPath).append("/qt5.always_local").c_str(), "r");
     if (always_local == nullptr) {
-        if (system_version > local_version) {
-            DBG("local Qt5 version is lower than system\nuse system (check dependencies)") << std::endl;
+        if (system_version >= local_version) {
+            DBG("local Qt5 version is lower than or equal to system\nuse system (check dependencies)") << std::endl;
             use_system = checkDeps(system_lib, exe, debug);
             if (debug) {
                 if (use_system) {
