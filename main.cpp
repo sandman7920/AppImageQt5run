@@ -51,6 +51,12 @@ int main(int /*argc*/, char *argv[]) {
     }
     unsetenv("OLD_LD_LIBRARY_PATH");
 
+    LSBRelease lsb_release;
+    if (!lsb_release.code_name.empty()) {
+        info.ld_path.push_back(':');
+        info.ld_path.append(appPath).append("/../lib_").append(lsb_release.code_name);
+    }
+
     if (debug) {
         std::cerr << "LD_LIBRARY_PATH=" << info.ld_path << '\n'
                   << "QT_PLUGIN_PATH=" << info.qt_plugins << '\n'
@@ -71,11 +77,6 @@ int main(int /*argc*/, char *argv[]) {
         }
     }
 
-    LSBRelease lsb_release;
-    if (!lsb_release.code_name.empty()) {
-        info.ld_path.push_back(':');
-        info.ld_path.append(appPath).append("../lib_").append(lsb_release.code_name);
-    }
     setenv("LD_LIBRARY_PATH", info.ld_path.c_str(), 1);
     setenv("QT_PLUGIN_PATH", info.qt_plugins.c_str(), 1);
 
